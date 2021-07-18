@@ -1,4 +1,5 @@
 // BijuBot. Jose Ignacio Choriego 16523
+// Comentarios iniciales
 
 #include <stdbool.h>
 #include <stdint.h>
