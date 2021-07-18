@@ -1,5 +1,5 @@
 // BijuBot. Jose Ignacio Choriego 16523
-// Comentarios iniciales
+// Comentarios iniciales, Codigo de palanca inercial
 
 #include <stdbool.h>
 #include <stdint.h>
