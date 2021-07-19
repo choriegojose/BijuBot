@@ -1,5 +1,16 @@
-// BijuBot. Jose Ignacio Choriego 16523
-// Comentarios iniciales, Codigo de palanca inercial
+// Archivo Main BijuBot.
+/** @file main.c
+ *
+ * @brief Main module to manage all the operations
+ *
+ * @par
+ * COPYRIGHT NOTICE: (c) 2021 All rights reserved.
+ * Propietary: Jose Ignacio Choriego - cho16523@uvg.edu.gt
+ * Universidad del Valle de Guatemala.
+ *
+ * Please cite this code if used even if its just some parts.
+ *
+ */
 
 #include <stdbool.h>
 #include <stdint.h>
