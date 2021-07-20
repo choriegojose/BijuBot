@@ -64,7 +64,7 @@ volatile uint32_t ui32Load;     // La variable para cargar el dato de los ms
 volatile uint32_t ui32PWMClock;
 volatile uint8_t ui8Adjust;
 
-//Variables principales para la programcion  del PID, son globles para el program
+//Variables principales para la programcion  del PID, son globles para el programa
 float e_k, w_k, e_d, E_k, u_k, e_k_1, E_k_1;
 
 //Banderas de control del PID
