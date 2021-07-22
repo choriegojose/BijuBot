@@ -36,6 +36,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/timer.h"
 #include "motor.h"
+#include "encoder.h"
 #include "driverlib/pwm.h"
 #include "driverlib/uart.h"
 #include "uartstdio.h"
@@ -45,7 +46,7 @@
 #define PWM_FREQUENCY 55
 //
 // A boolean that is set when a MPU6050 command has completed.
-// Booleano para el Status del MPU6050, cuando hacompletado la lectura.
+// Booleano para el Status del MPU6050, cuando ha completado la lectura.
 volatile bool g_bMPU6050Done;
 
 //
