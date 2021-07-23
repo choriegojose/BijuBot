@@ -34,6 +34,7 @@ main.obj: C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/i2c.h
 main.obj: C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/sysctl.h
 main.obj: C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/timer.h
 main.obj: C:/Users/chori/Desktop/Tesis_Proj/Tesis\ Jerry\ Rivera/Bioinspired-Leporidae-Leg-master/Libraries/motor/motor.h
+main.obj: ../encoder.h
 main.obj: C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/pwm.h
 main.obj: C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/uart.h
 main.obj: ../uartstdio.h
@@ -108,6 +109,8 @@ C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/sysctl.h:
 C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/timer.h:
 
 C:/Users/chori/Desktop/Tesis_Proj/Tesis\ Jerry\ Rivera/Bioinspired-Leporidae-Leg-master/Libraries/motor/motor.h:
+
+../encoder.h:
 
 C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/pwm.h:
 

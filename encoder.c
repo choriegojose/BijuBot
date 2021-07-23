@@ -1,10 +1,9 @@
 /** @file encoder.c
  *
  * @brief Module to control a quadrature encoder.
- *
- * @par
- * COPYRIGHT NOTICE: (c) 2018 Barr Group. All rights reserved.
- * Propietary: Christian Sandoval - san16250@uvg.edu.gt
+ @par
+ * COPYRIGHT NOTICE: (c) 2021 All rights reserved.
+ * Propietary: Jose Ignacio Choriego - cho16523@uvg.edu.gt
  * Universidad del Valle de Guatemala.
  *
  * Please cite this code if used even if its just some parts.
@@ -21,7 +20,7 @@
 #include "inc/hw_gpio.h"
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
-#include "Libraries/encoder/encoder.h"
+#include "encoder.h"
 
 /*!
  * @brief Configure the module 0 of the quadrature encoder.

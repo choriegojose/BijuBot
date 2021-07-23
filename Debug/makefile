@@ -10,6 +10,7 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
+"./encoder.obj" \
 "./main.obj" \
 "./motor.obj" \
 "./tm4c123gh6pm_startup_ccs.obj" \
@@ -159,8 +160,8 @@ BijuBotIMUtesto.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "main.obj" "motor.obj" "tm4c123gh6pm_startup_ccs.obj" "uartstdio.obj" 
-	-$(RM) "main.d" "motor.d" "tm4c123gh6pm_startup_ccs.d" "uartstdio.d" 
+	-$(RM) "encoder.obj" "main.obj" "motor.obj" "tm4c123gh6pm_startup_ccs.obj" "uartstdio.obj" 
+	-$(RM) "encoder.d" "main.d" "motor.d" "tm4c123gh6pm_startup_ccs.d" "uartstdio.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

@@ -66,7 +66,7 @@ volatile uint32_t ui32PWMClock;
 volatile uint8_t ui8Adjust;
 
 //Variables principales para la programcion  del PID, son globles para el programa
-float e_k, w_k, e_d, E_k, u_k, e_k_1, E_k_1;
+float e_k, w_k, e_d, E_k, u_k, e_k_1, E_k_1, encoder1_pos;
 
 //Banderas de control del PID
 bool Ek_1f = false;
@@ -113,6 +113,8 @@ void Timer0IntHandlerA(void)
         PIDflag = false;
     }
     */
+
+
 }
 // The interrupt handler for the I2C module.
 // Handler de interrupciones para el modulo de 12C
@@ -173,7 +175,9 @@ void PWMinit(void)
     ROM_PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, true);
     ROM_PWMGenEnable(PWM1_BASE, PWM_GEN_0);
     */
+
     motor1_configure(10000);
+    qei_module0_config(75, 12, false);
 }
 
 //Funcion para reactivar el TIMER0
@@ -225,7 +229,7 @@ void InitI2C0(void)
 }
 
 void ConfigureUART(void)
-{ // Função retirada do exemplo hello.c
+{ // Se configura el UART y el Baudrate
 
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
@@ -272,7 +276,7 @@ void PIDblock(void)
         ek_1f = true;
     }
 
-    e_k = w_k;
+    e_k = w_k - encoder1_pos;
     e_d = e_k - e_k_1;
     E_k = E_k_1 + e_k;
     u_k = Kp * e_k + (KI * E_k) * deltat + (Kd * e_d) / deltat;
@@ -388,6 +392,9 @@ int main()
 
         w_k = y;
 
+        // Obtengo el valor de enconder magnetico
+        encoder1_pos = get_position_in_degrees(QEI0_BASE, 75, 12);
+
         // Asigno el valor al bloque del PID
         // Cargo los valores a la covercion de angulos a radianes.
         inservo = u_k + 90;
@@ -404,14 +411,12 @@ int main()
         }
 
         // Cargo el valor al servo
-        // ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0,
-        // outtoservo * ui32Load / 1000);
+        //ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0,outtoservo * ui32Load / 1000);
 
-        motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo * ui32Load / 1000 , 10000);
+        motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo , 10000);
 
         // Se despliega el valor al UART
-        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int) outtoservo,(int) y);
+        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int) encoder1_pos,(int) y);
 
     }
-
 }
