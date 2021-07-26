@@ -76,9 +76,9 @@ bool ek_1f = false;
 const float deltat = 0.0001;
 
 // Constantes del PID (kp,ki,kd)
-const float Kp = 2;
-const float KI = 2;
-const float Kd = 10;
+const float Kp = 20;
+const float KI = 10;
+const float Kd = 0.1;
 
 // Variables para control del TIMER0
 uint32_t ui32Period;
@@ -165,10 +165,12 @@ void PWMinit(void)
     // Se define el pin 0 del puerto D como output y como   del PWM
     ROM_GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_0);
     ROM_GPIOPinConfigure(GPIO_PD0_M1PWM0);
+    */
 
     // configuracion del PWM del motor servo
     ui32PWMClock = SysCtlClockGet() / 64;
     ui32Load = (ui32PWMClock / PWM_FREQUENCY) - 1;
+    /*
     PWMGenConfigure(PWM1_BASE, PWM_GEN_0, PWM_GEN_MODE_DOWN);
     PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, ui32Load);
     ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust * ui32Load / 1000);
@@ -176,7 +178,7 @@ void PWMinit(void)
     ROM_PWMGenEnable(PWM1_BASE, PWM_GEN_0);
     */
 
-    motor1_configure(10000);
+    motor1_configure(ui32Load);
     qei_module0_config(75, 12, false);
 }
 
@@ -413,10 +415,10 @@ int main()
         // Cargo el valor al servo
         //ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0,outtoservo * ui32Load / 1000);
 
-        motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo , 10000);
+        motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo , 10);
 
         // Se despliega el valor al UART
-        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int) encoder1_pos,(int) y);
+        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int) outtoservo,(int) y);
 
     }
 }
