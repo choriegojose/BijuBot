@@ -265,7 +265,7 @@ void MPU6050Callback(void *pvCallbackData, uint_fast8_t ui8Status)
 
 void PIDblock(void)
 {
-    //Constantes principales para la programcion  del PID, son glables para el programa
+    //Constantes principales para la programcion  del PID, son globles para el programa
 
     if (Ek_1f == false)
     {
