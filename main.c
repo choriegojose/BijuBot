@@ -66,7 +66,7 @@ volatile uint32_t ui32PWMClock;
 volatile uint8_t ui8Adjust;
 
 //Variables principales para la programcion  del PID, son globles para el programa
-float e_k, w_k, e_d, E_k, u_k, e_k_1, E_k_1, encoder1_pos;
+float e_k, w_k, e_d, E_k, u_k, e_k_1, E_k_1, encoder1_pos, encoder1go;
 
 //Banderas de control del PID
 bool Ek_1f = false;
@@ -92,6 +92,7 @@ float axuraw, ayuraw, azuraw;
 
 // Variables para la convercion de angulos a constante de ms para el servo.
 float outtoservo, inservo;
+
 
 // Prototipo de función
 void PIDblock(void);
@@ -179,7 +180,8 @@ void PWMinit(void)
     */
 
     motor1_configure(ui32Load);
-    qei_module0_config(75, 12, false);
+    qei_module0_config(100, 12, false);
+    qei_module1_config(100, 12, false);
 }
 
 //Funcion para reactivar el TIMER0
@@ -278,13 +280,14 @@ void PIDblock(void)
         ek_1f = true;
     }
 
-    e_k = w_k - encoder1_pos;
-    e_d = e_k - e_k_1;
-    E_k = E_k_1 + e_k;
-    u_k = Kp * e_k + (KI * E_k) * deltat + (Kd * e_d) / deltat;
-    E_k_1 = E_k;
-    e_k_1 = e_k;
+    e_k = encoder1go - w_k;
+    //e_d = e_k - e_k_1;
+    //E_k = E_k_1 + e_k;
+    //u_k = Kp * e_k + (KI * E_k) * deltat + (Kd * e_d) / deltat;
+    //E_k_1 = E_k;
+    //e_k_1 = e_k;
 
+    u_k = e_k;
     // Activo la bandera de nuevo
 
 }
@@ -395,7 +398,18 @@ int main()
         w_k = y;
 
         // Obtengo el valor de enconder magnetico
-        encoder1_pos = get_position_in_degrees(QEI0_BASE, 75, 12);
+        encoder1_pos = get_position_in_degrees(QEI0_BASE, 100, 12);
+        encoder1go = encoder1_pos - 360;
+
+        if (encoder1_pos > 540)
+            {
+        encoder1go = encoder1_pos - 720;
+            }
+
+        if (encoder1_pos < 180)
+            {
+        encoder1go = encoder1_pos;
+            }
 
         // Asigno el valor al bloque del PID
         // Cargo los valores a la covercion de angulos a radianes.
@@ -415,10 +429,10 @@ int main()
         // Cargo el valor al servo
         //ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0,outtoservo * ui32Load / 1000);
 
-        motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo , 10);
+        motor_velocity_write(PWM0_BASE, PWM_GEN_0, u_k, 10);
 
         // Se despliega el valor al UART
-        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int) outtoservo,(int) y);
+        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int) encoder1go,(int) y);
 
     }
 }
