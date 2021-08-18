@@ -73,12 +73,12 @@ bool Ek_1f = false;
 bool ek_1f = false;
 
 // Delta T del reloj, para controlar al PID
-const float deltat = 0.0001;
+const float deltat = 0.001;
 
 // Constantes del PID (kp,ki,kd)
-const float Kp = 20;
-const float KI = 10;
-const float Kd = 0.1;
+const float Kp = 3;
+const float KI = 50*0.001;
+const float Kd = 0.023/0.001;
 
 // Variables para control del TIMER0
 uint32_t ui32Period;
@@ -87,8 +87,13 @@ bool PIDflag = true;
 //Variables para el acelerometro, giroscopio y struct del MPU6050
 float fAccel[3], fGyro[3];
 tMPU6050 sMPU6050;
-float x = 0, y = 0;
-float axuraw, ayuraw, azuraw;
+float y;
+float thetagiro,thetagiro_1,HPF,HPF_1,LPF,LPF_1 ;
+bool thetagiro_1f = false;
+bool HPF_1f = false;
+bool LPF_1f = false;
+const float lambda = 0.9;
+
 
 // Variables para la convercion de angulos a constante de ms para el servo.
 float outtoservo, inservo;
@@ -96,24 +101,22 @@ float outtoservo, inservo;
 
 // Prototipo de función
 void PIDblock(void);
+void compfiltering(void);
 
+// Empiezan Funciones
 void Timer0IntHandlerA(void)
 {
     // Borramos la interrupcion del timer
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
     // Leemos el estado actual
     // lo escribimos de vuelta en el estado contrario
-    PIDblock();
-    /*if (PIDflag == false)
-    {
-        PIDflag = true;
-    }
 
-    if (PIDflag == true)
-    {
-        PIDflag = false;
-    }
-    */
+   // Se coloca el bloque del PID en el handler de Interrupcion
+    PIDflag = true;
+
+
+
+
 
 
 }
@@ -135,7 +138,7 @@ void TIMER0init(void)
 
     TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC); // Configuramos  el timer 0
 
-    ui32Period = (4000); // El periodo del reloj lo ponemos para que sea 10000 Hz
+    ui32Period = (40000); // El periodo del reloj lo ponemos para que sea 10000 Hz
 
     TimerLoadSet(TIMER0_BASE, TIMER_A, ui32Period - 1); //Cargo el valor al reloj
 
@@ -152,32 +155,13 @@ void TIMER0init(void)
 //Funcion para iniciar el modulo del PWM
 void PWMinit(void)
 {
-    /*
-    ui8Adjust = 83;
     // Se define el reloj del sistema, con reloj de 40 MHZ
-    ROM_SysCtlClockSet(
-    SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
-
-    ROM_SysCtlPWMClockSet(SYSCTL_PWMDIV_64);
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM1);
-
-    // Se definen los perifericos del GPIO en  D
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
-    // Se define el pin 0 del puerto D como output y como   del PWM
-    ROM_GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_0);
-    ROM_GPIOPinConfigure(GPIO_PD0_M1PWM0);
-    */
+    ROM_SysCtlClockSet(SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 
     // configuracion del PWM del motor
     ui32PWMClock = SysCtlClockGet() / 64;
     ui32Load = (ui32PWMClock / PWM_FREQUENCY) - 1;
-    /*
-    PWMGenConfigure(PWM1_BASE, PWM_GEN_0, PWM_GEN_MODE_DOWN);
-    PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, ui32Load);
-    ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust * ui32Load / 1000);
-    ROM_PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, true);
-    ROM_PWMGenEnable(PWM1_BASE, PWM_GEN_0);
-    */
+ //Inicialización de los motores.
 
     motor1_configure(10);
     qei_module0_config(100, 12, false);
@@ -292,6 +276,45 @@ void PIDblock(void)
 
 }
 
+// Bloque de implementacion de filtro complementario
+void compfiltering(void){
+
+    if (thetagiro_1f == false)
+     {
+        thetagiro_1 = 0;
+        thetagiro_1f = true;
+     }
+
+    if (LPF_1f == false)
+     {
+            LPF_1 = 0;
+            LPF_1f = true;
+     }
+
+    if (HPF_1f == false)
+         {
+                HPF_1 = 0;
+                HPF_1f = true;
+         }
+
+    thetagiro = thetagiro_1 + (-fGyro[0]*(180/3.1416)*deltat);
+
+
+   // Se inicia el filtro, pasa bajas
+   LPF = (1-lambda)*y + lambda*LPF_1;
+   LPF_1 = LPF;
+    // filtro, pasa altas
+   HPF = (lambda*thetagiro) - (lambda*thetagiro_1) + lambda*HPF_1;
+   // Resultado
+   w_k = LPF + HPF;
+   //Variables pasadas
+   thetagiro_1 = thetagiro;
+   LPF_1 = LPF;
+   HPF_1 = HPF;
+}
+
+
+
 //
 // The MPU6050 example.
 //
@@ -332,6 +355,7 @@ void MPU6050init(void)
     while (!g_bMPU6050Done)
     {
     }
+
 
     g_bMPU6050Done = false;
     MPU6050ReadModifyWrite(&sMPU6050, MPU6050_O_PWR_MGMT_1, 0x00,
@@ -387,19 +411,14 @@ int main()
         //
         // Do something with the new accelerometer and gyroscope readings.
         //
-        axuraw = fAccel[0] * 0.00059875;
-        ayuraw = fAccel[1] * 0.00059875;
-        azuraw = fAccel[2] * 0.00059875;
 
-        y = (atan2(axuraw, azuraw) * 180.0) / 3.14;
+        y = (atan2(fAccel[0], fAccel[2]) * 180.0) / 3.1416;
 
-        x = (atan2(ayuraw, sqrt(axuraw * axuraw + azuraw * azuraw)) * 180.0) / 3.14;
 
-        w_k = y;
 
         // Obtengo el valor de enconder magnetico
         encoder1_pos = get_position_in_degrees(QEI0_BASE, 100, 12);
-        //encoder1go = atan2(sin(encoder1_pos-360),cos(encoder1_pos-360));
+       // encoder1go = -atan2(sin(encoder1_pos-360),cos(encoder1_pos-360))*(180/3.1416);
 
         encoder1go = encoder1_pos - 360;
 
@@ -414,28 +433,24 @@ int main()
         encoder1go = encoder1_pos;
             }
 
+
+        if (PIDflag == true)
+            {
+
+        compfiltering();
+        PIDblock();
+
+        PIDflag = false;
+            }
+
         // Asigno el valor al bloque del PID
         // Cargo los valores a la covercion de angulos a radianes.
-        outtoservo = u_k*0.55555555556;
-
-        // Genero margenes para mantener el servo en ciertos rangos.
-        /*
-        if (outtoservo < 32)
-        {
-            outtoservo = 32;
-        }
-        if (outtoservo > 135)
-        {
-            outtoservo = 135;
-        }
-       */
-        // Cargo el valor al servo
-        //ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0,outtoservo * ui32Load / 1000);
+        outtoservo = u_k*0.5556;
 
         motor_velocity_write(PWM0_BASE, PWM_GEN_0,outtoservo , 10);
 
         // Se despliega el valor al UART
-        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int) outtoservo,(int) y);
+        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int)  encoder1go,(int) w_k );
 
     }
 }
