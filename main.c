@@ -76,7 +76,7 @@ bool ek_1f = false;
 const float deltat = 0.001;
 
 // Constantes del PID (kp,ki,kd)
-const float Kp = 3;
+const float Kp = 10;
 const float KI = 50*0.001;
 const float Kd = 0.023/0.001;
 
@@ -297,16 +297,17 @@ void compfiltering(void){
                 HPF_1f = true;
          }
 
-    thetagiro = thetagiro_1 + (-fGyro[0]*(180/3.1416)*deltat);
+    thetagiro = -thetagiro_1 - (-fGyro[0]*(180/3.1416)*deltat);
 
 
    // Se inicia el filtro, pasa bajas
    LPF = (1-lambda)*y + lambda*LPF_1;
-   LPF_1 = LPF;
+
     // filtro, pasa altas
    HPF = (lambda*thetagiro) - (lambda*thetagiro_1) + lambda*HPF_1;
    // Resultado
    w_k = LPF + HPF;
+
    //Variables pasadas
    thetagiro_1 = thetagiro;
    LPF_1 = LPF;
@@ -412,7 +413,8 @@ int main()
         // Do something with the new accelerometer and gyroscope readings.
         //
 
-        y = (atan2(fAccel[0], fAccel[2]) * 180.0) / 3.1416;
+        y = -(atan2(fAccel[0], fAccel[2]) * 180.0) / 3.1416;
+
 
 
 
@@ -447,10 +449,12 @@ int main()
         // Cargo los valores a la covercion de angulos a radianes.
         outtoservo = u_k*0.5556;
 
-        motor_velocity_write(PWM0_BASE, PWM_GEN_0,outtoservo , 10);
+
+        motor_velocity_write(PWM0_BASE, PWM_GEN_0,outtoservo,1);
+
 
         // Se despliega el valor al UART
-        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int)  encoder1go,(int) w_k );
+        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int)  outtoservo,(int) w_k );
 
     }
 }
