@@ -76,12 +76,12 @@ qei_module0_config(uint32_t motor_ratio, uint32_t encoder_pulses, bool swap)
 	//Configure quadrature encoder using FT0481 top limit
 	QEIConfigure(QEI0_BASE, (QEI_CONFIG_CAPTURE_A_B | QEI_CONFIG_NO_RESET |
 		QEI_CONFIG_QUADRATURE | temp), 
-        motor_ratio * encoder_pulses * 2);
+        motor_ratio * encoder_pulses);
 
 	//Enable quadrature encoder
 	QEIEnable(QEI0_BASE);
 
-	QEIPositionSet(QEI0_BASE, motor_ratio * encoder_pulses);
+	QEIPositionSet(QEI0_BASE,0);
 
 	//Enable noise filter
 	QEIFilterDisable(QEI0_BASE);
@@ -138,12 +138,12 @@ qei_module1_config(uint32_t motor_ratio, uint32_t encoder_pulses, bool swap)
 	//Configure quadrature encoder using FT0481 top limit
 	QEIConfigure(QEI1_BASE, (QEI_CONFIG_CAPTURE_A_B | QEI_CONFIG_NO_RESET |
 		QEI_CONFIG_QUADRATURE | temp),
-        motor_ratio * encoder_pulses * 2);
+        motor_ratio * encoder_pulses);
 
 	//Enable quadrature encoder
 	QEIEnable(QEI1_BASE);
 
-	QEIPositionSet(QEI1_BASE, motor_ratio * encoder_pulses);
+	QEIPositionSet(QEI1_BASE, 0);
 
 	//Enable noise filter
 	QEIFilterDisable(QEI1_BASE);
@@ -168,7 +168,7 @@ get_position_in_degrees(uint32_t qei_base, uint32_t motor_ratio,
     uint32_t pos_in_pulses;
     float position;
     pos_in_pulses = QEIPositionGet(qei_base);
-    position = pos_in_pulses * (360.0f/(motor_ratio*encoder_pulses));
+    position = pos_in_pulses * (2*3.1416/(motor_ratio*encoder_pulses));
 return position;
 }
 

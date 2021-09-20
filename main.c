@@ -76,9 +76,9 @@ bool ek_1f = false;
 const float deltat = 0.001;
 
 // Constantes del PID (kp,ki,kd)
-const float Kp = 10;
-const float KI = 50*0.001;
-const float Kd = 0.023/0.001;
+const float Kp = 1;
+const float KI = 1;
+const float Kd = 1;
 
 // Variables para control del TIMER0
 uint32_t ui32Period;
@@ -138,7 +138,7 @@ void TIMER0init(void)
 
     TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC); // Configuramos  el timer 0
 
-    ui32Period = (40000); // El periodo del reloj lo ponemos para que sea 10000 Hz
+    ui32Period = (40000); // El periodo del reloj lo ponemos para que sea 1000 Hz
 
     TimerLoadSet(TIMER0_BASE, TIMER_A, ui32Period - 1); //Cargo el valor al reloj
 
@@ -163,7 +163,7 @@ void PWMinit(void)
     ui32Load = (ui32PWMClock / PWM_FREQUENCY) - 1;
  //Inicialización de los motores.
 
-    motor1_configure(10);
+    motor1_configure(100);
     qei_module0_config(100, 12, false);
     qei_module1_config(100, 12, false);
 }
@@ -272,7 +272,6 @@ void PIDblock(void)
     e_k_1 = e_k;
 
     u_k = e_k;
-    // Activo la bandera de nuevo
 
 }
 
@@ -297,8 +296,7 @@ void compfiltering(void){
                 HPF_1f = true;
          }
 
-    thetagiro = -thetagiro_1 - (-fGyro[0]*(180/3.1416)*deltat);
-
+    thetagiro = thetagiro_1 + (fGyro[1]*(180/3.1416)*deltat);
 
    // Se inicia el filtro, pasa bajas
    LPF = (1-lambda)*y + lambda*LPF_1;
@@ -413,27 +411,17 @@ int main()
         // Do something with the new accelerometer and gyroscope readings.
         //
 
-        y = -(atan2(fAccel[0], fAccel[2]) * 180.0) / 3.1416;
+        y = (atan2(fAccel[0], fAccel[2]) * 180.0) / 3.1416 ;
 
 
 
 
         // Obtengo el valor de enconder magnetico
         encoder1_pos = get_position_in_degrees(QEI0_BASE, 100, 12);
-       // encoder1go = -atan2(sin(encoder1_pos-360),cos(encoder1_pos-360))*(180/3.1416);
 
-        encoder1go = encoder1_pos - 360;
+       // Se realiza la converción del decoder
+       encoder1go = atan2(sin(encoder1_pos),cos(encoder1_pos))*(180/3.1416);
 
-
-        if (encoder1_pos > 540)
-            {
-        encoder1go = encoder1_pos - 720;
-            }
-
-        if (encoder1_pos < 180)
-            {
-        encoder1go = encoder1_pos;
-            }
 
 
         if (PIDflag == true)
@@ -446,15 +434,17 @@ int main()
             }
 
         // Asigno el valor al bloque del PID
-        // Cargo los valores a la covercion de angulos a radianes.
-        outtoservo = u_k*0.5556;
+        // Cargo los valores del PID a la variable para controlar el motor, que es similar a un servo.
+        outtoservo = u_k;
 
 
-        motor_velocity_write(PWM0_BASE, PWM_GEN_0,outtoservo,1);
+       motor_velocity_write(PWM0_BASE, PWM_GEN_0,outtoservo,100);
 
 
         // Se despliega el valor al UART
-        UARTprintf("out_to servo: %d | Ang. Y: %d\n", (int)  outtoservo,(int) w_k );
+        UARTprintf("out_to motor: %d | Ang. IMU: %d\n", (int) outtoservo,(int) w_k );
+        // UARTprintf((int) w_k );
+        //UARTprintf( (int) encoder1go );
 
     }
 }
