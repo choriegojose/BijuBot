@@ -76,9 +76,13 @@ bool ek_1f = false;
 const float deltat = 0.001;
 
 // Constantes del PID (kp,ki,kd)
-const float Kp = 1;
+//const float Kp = 0.863;
+//const float KI = 1;
+//const float Kd = 0.0055;
+
+const float Kp = 0.863;
 const float KI = 1;
-const float Kd = 1;
+const float Kd = 0.0055;
 
 // Variables para control del TIMER0
 uint32_t ui32Period;
@@ -295,18 +299,19 @@ void compfiltering(void){
                 HPF_1 = 0;
                 HPF_1f = true;
          }
-
+    //1.) Se obtiene la pos angular con el acelerometro
     thetagiro = thetagiro_1 + (fGyro[1]*(180/3.1416)*deltat);
 
-   // Se inicia el filtro, pasa bajas
+    //2.) Se inicia el filtro, pasa bajas
    LPF = (1-lambda)*y + lambda*LPF_1;
 
-    // filtro, pasa altas
+    //3.) Se inicia el filtro, pasa altas
    HPF = (lambda*thetagiro) - (lambda*thetagiro_1) + lambda*HPF_1;
-   // Resultado
+
+    //4.) Resultado final
    w_k = LPF + HPF;
 
-   //Variables pasadas
+   // 5.) Variables pasadas
    thetagiro_1 = thetagiro;
    LPF_1 = LPF;
    HPF_1 = HPF;
@@ -442,8 +447,9 @@ int main()
 
 
         // Se despliega el valor al UART
-        UARTprintf("out_to motor: %d | Ang. IMU: %d\n", (int) outtoservo,(int) w_k );
-        // UARTprintf((int) w_k );
+       UARTprintf("out_to motor: %d | Ang. IMU: %d\n", (int) encoder1go ,(int) w_k );
+       //UARTprintf("Y%d X%d\n", (int) encoder1go,(int) w_k );
+        //UARTprintf("out_to motor: %d\n", (int) u_k);
         //UARTprintf( (int) encoder1go );
 
     }
