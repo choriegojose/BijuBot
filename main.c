@@ -81,7 +81,7 @@ const float deltat = 0.001;
 //const float Kd = 0.0055;
 
 const float Kp = 0.863;
-const float KI = 1;
+const float KI = 0;
 const float Kd = 0.0055;
 
 // Variables para control del TIMER0
@@ -136,23 +136,32 @@ void I2CMSimpleIntHandler(void)
     I2CMIntHandler(&g_sI2CMSimpleInst);
 }
 
+
 void TIMER0init(void)
 {
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0); // Habilitamos el periferico del TIMER0
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+        // 1. Se habilita el periférico del TIMER0
 
-    TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC); // Configuramos  el timer 0
+        TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+        // 2. Se configura el timer para que el conteo sea periódico
 
-    ui32Period = (40000); // El periodo del reloj lo ponemos para que sea 1000 Hz
+        ui32Period = (40000);
+        //3. Se carga un valor a la variable para poder hacer la conversión
 
-    TimerLoadSet(TIMER0_BASE, TIMER_A, ui32Period - 1); //Cargo el valor al reloj
+        TimerLoadSet(TIMER0_BASE, TIMER_A, ui32Period - 1);
+        //4. Se carga el valor menos uno al bloque A del timer 0.
 
-    IntEnable(INT_TIMER0A); // Habilitamos el bloque A del timer0
+        IntEnable(INT_TIMER0A);
+        //5. se habilita el bloque A del timer 0.
 
-    TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Habilitamos la interrupcion del timer.
+        TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+        //6. Se habilita la interrupción del timer.
 
-    IntMasterEnable();  // Habilitamos las interrupcion
+        IntMasterEnable();
+        //7. Se habilitan todas las interrupciones.
 
-    TimerEnable(TIMER0_BASE, TIMER_A); // Habilito el timer 0
+        TimerEnable(TIMER0_BASE, TIMER_A);
+        //8. Se habilita el bloque A del timer 0
 
 }
 
@@ -275,8 +284,6 @@ void PIDblock(void)
     E_k_1 = E_k;
     e_k_1 = e_k;
 
-    u_k = e_k;
-
 }
 
 // Bloque de implementacion de filtro complementario
@@ -309,13 +316,15 @@ void compfiltering(void){
    HPF = (lambda*thetagiro) - (lambda*thetagiro_1) + lambda*HPF_1;
 
     //4.) Resultado final
-   w_k = LPF + HPF;
+   w_k = LPF + HPF ;
 
    // 5.) Variables pasadas
    thetagiro_1 = thetagiro;
    LPF_1 = LPF;
    HPF_1 = HPF;
+
 }
+
 
 
 
@@ -420,7 +429,6 @@ int main()
 
 
 
-
         // Obtengo el valor de enconder magnetico
         encoder1_pos = get_position_in_degrees(QEI0_BASE, 100, 12);
 
@@ -448,7 +456,7 @@ int main()
 
         // Se despliega el valor al UART
        UARTprintf("out_to motor: %d | Ang. IMU: %d\n", (int) encoder1go ,(int) w_k );
-       //UARTprintf("Y%d X%d\n", (int) encoder1go,(int) w_k );
+      // UARTprintf("Y%d X%d\n", (int) encoder1go,(int) w_k );
         //UARTprintf("out_to motor: %d\n", (int) u_k);
         //UARTprintf( (int) encoder1go );
 
