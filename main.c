@@ -80,8 +80,8 @@ const float deltat = 0.001;
 //const float KI = 1;
 //const float Kd = 0.0055;
 
-const float Kp = 0.863;
-const float KI = 0;
+const float Kp = 0.5;
+const float KI = 3;
 const float Kd = 0.0055;
 
 // Variables para control del TIMER0
@@ -92,22 +92,35 @@ bool PIDflag = true;
 float fAccel[3], fGyro[3];
 tMPU6050 sMPU6050;
 float y;
-float thetagiro,thetagiro_1,HPF,HPF_1,LPF,LPF_1 ;
+float thetagiro, thetagiro_1, HPF, HPF_1, LPF, LPF_1;
 bool thetagiro_1f = false;
 bool HPF_1f = false;
 bool LPF_1f = false;
 const float lambda = 0.9;
 
+// Variables, para la colocacion del puerto serial.
+unsigned char dataIMU[4];
+unsigned char encoderdata[4];
+char n;
+int serial;
 
-// Variables para la convercion de angulos a constante de ms para el servo.
+// Variables para la convercion de angulos a constante de ms para el motor.
 float outtoservo, inservo;
-
 
 // Prototipo de función
 void PIDblock(void);
 void compfiltering(void);
 
 // Empiezan Funciones
+
+// Interrupcion de UART
+void UART0IntHandler(void)
+{
+    UARTIntClear(UART0_BASE, UARTIntStatus(UART0_BASE, true));
+    n = UARTCharGet(UART0_BASE);
+    serial = 1;
+}
+
 void Timer0IntHandlerA(void)
 {
     // Borramos la interrupcion del timer
@@ -115,13 +128,8 @@ void Timer0IntHandlerA(void)
     // Leemos el estado actual
     // lo escribimos de vuelta en el estado contrario
 
-   // Se coloca el bloque del PID en el handler de Interrupcion
+    // Se coloca el bloque del PID en el handler de Interrupcion
     PIDflag = true;
-
-
-
-
-
 
 }
 // The interrupt handler for the I2C module.
@@ -136,32 +144,31 @@ void I2CMSimpleIntHandler(void)
     I2CMIntHandler(&g_sI2CMSimpleInst);
 }
 
-
 void TIMER0init(void)
 {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
-        // 1. Se habilita el periférico del TIMER0
+    // 1. Se habilita el periférico del TIMER0
 
-        TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
-        // 2. Se configura el timer para que el conteo sea periódico
+    TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+    // 2. Se configura el timer para que el conteo sea periódico
 
-        ui32Period = (40000);
-        //3. Se carga un valor a la variable para poder hacer la conversión
+    ui32Period = (40000);
+    //3. Se carga un valor a la variable para poder hacer la conversión
 
-        TimerLoadSet(TIMER0_BASE, TIMER_A, ui32Period - 1);
-        //4. Se carga el valor menos uno al bloque A del timer 0.
+    TimerLoadSet(TIMER0_BASE, TIMER_A, ui32Period - 1);
+    //4. Se carga el valor menos uno al bloque A del timer 0.
 
-        IntEnable(INT_TIMER0A);
-        //5. se habilita el bloque A del timer 0.
+    IntEnable(INT_TIMER0A);
+    //5. se habilita el bloque A del timer 0.
 
-        TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-        //6. Se habilita la interrupción del timer.
+    TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    //6. Se habilita la interrupción del timer.
 
-        IntMasterEnable();
-        //7. Se habilitan todas las interrupciones.
+    IntMasterEnable();
+    //7. Se habilitan todas las interrupciones.
 
-        TimerEnable(TIMER0_BASE, TIMER_A);
-        //8. Se habilita el bloque A del timer 0
+    TimerEnable(TIMER0_BASE, TIMER_A);
+    //8. Se habilita el bloque A del timer 0
 
 }
 
@@ -169,16 +176,18 @@ void TIMER0init(void)
 void PWMinit(void)
 {
     // Se define el reloj del sistema, con reloj de 40 MHZ
-    ROM_SysCtlClockSet(SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
+    ROM_SysCtlClockSet(
+    SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 
     // configuracion del PWM del motor
     ui32PWMClock = SysCtlClockGet() / 64;
     ui32Load = (ui32PWMClock / PWM_FREQUENCY) - 1;
- //Inicialización de los motores.
+    //Inicialización de los motores.
 
     motor1_configure(100);
+    motor2_configure(100);
     qei_module0_config(100, 12, false);
-    qei_module1_config(100, 12, false);
+
 }
 
 //Funcion para reactivar el TIMER0
@@ -237,9 +246,15 @@ void ConfigureUART(void)
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    /*
+     UARTConfigSetExpClk(
+     UART0_BASE, SysCtlClockGet(), 115200,
+     UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE);
+     UARTStdioConfig(0, 115200, SysCtlClockGet());
+     n = 0;
+     */
     UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
     UARTStdioConfig(0, 115200, 16000000);
-
 }
 
 //
@@ -287,46 +302,44 @@ void PIDblock(void)
 }
 
 // Bloque de implementacion de filtro complementario
-void compfiltering(void){
+void compfiltering(void)
+{
 
     if (thetagiro_1f == false)
-     {
+    {
         thetagiro_1 = 0;
         thetagiro_1f = true;
-     }
+    }
 
     if (LPF_1f == false)
-     {
-            LPF_1 = 0;
-            LPF_1f = true;
-     }
+    {
+        LPF_1 = 0;
+        LPF_1f = true;
+    }
 
     if (HPF_1f == false)
-         {
-                HPF_1 = 0;
-                HPF_1f = true;
-         }
+    {
+        HPF_1 = 0;
+        HPF_1f = true;
+    }
     //1.) Se obtiene la pos angular con el acelerometro
-    thetagiro = thetagiro_1 + (fGyro[1]*(180/3.1416)*deltat);
+    thetagiro = thetagiro_1 + (fGyro[1] * (180 / 3.1416) * deltat);
 
     //2.) Se inicia el filtro, pasa bajas
-   LPF = (1-lambda)*y + lambda*LPF_1;
+    LPF = (1 - lambda) * y + lambda * LPF_1;
 
     //3.) Se inicia el filtro, pasa altas
-   HPF = (lambda*thetagiro) - (lambda*thetagiro_1) + lambda*HPF_1;
+    HPF = (lambda * thetagiro) - (lambda * thetagiro_1) + lambda * HPF_1;
 
     //4.) Resultado final
-   w_k = LPF + HPF ;
+    w_k = LPF + HPF;
 
-   // 5.) Variables pasadas
-   thetagiro_1 = thetagiro;
-   LPF_1 = LPF;
-   HPF_1 = HPF;
+    // 5.) Variables pasadas
+    thetagiro_1 = thetagiro;
+    LPF_1 = LPF;
+    HPF_1 = HPF;
 
 }
-
-
-
 
 //
 // The MPU6050 example.
@@ -368,7 +381,6 @@ void MPU6050init(void)
     while (!g_bMPU6050Done)
     {
     }
-
 
     g_bMPU6050Done = false;
     MPU6050ReadModifyWrite(&sMPU6050, MPU6050_O_PWR_MGMT_1, 0x00,
@@ -425,40 +437,80 @@ int main()
         // Do something with the new accelerometer and gyroscope readings.
         //
 
-        y = (atan2(fAccel[0], fAccel[2]) * 180.0) / 3.1416 ;
-
-
+        y = (atan2(fAccel[0], fAccel[2]) * 180.0) / 3.1416;
 
         // Obtengo el valor de enconder magnetico
         encoder1_pos = get_position_in_degrees(QEI0_BASE, 100, 12);
 
-       // Se realiza la converción del decoder
-       encoder1go = atan2(sin(encoder1_pos),cos(encoder1_pos))*(180/3.1416);
-
-
+        // Se realiza la converción del decoder
+        encoder1go = atan2(sin(encoder1_pos), cos(encoder1_pos))
+                * (180 / 3.1416);
 
         if (PIDflag == true)
-            {
+        {
 
-        compfiltering();
-        PIDblock();
+            compfiltering();
+            PIDblock();
 
-        PIDflag = false;
-            }
+            PIDflag = false;
+        }
 
         // Asigno el valor al bloque del PID
         // Cargo los valores del PID a la variable para controlar el motor, que es similar a un servo.
         outtoservo = u_k;
 
+        if (w_k > 90 && encoder1go > 90)
+        {
+            motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
+        }
 
-       motor_velocity_write(PWM0_BASE, PWM_GEN_0,outtoservo,100);
+        else if (w_k < -90 && encoder1go < -90)
+        {
+            motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
+        }
 
+        else
+        {
+            motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo, 100);
+            motor_velocity_write(PWM0_BASE, PWM_GEN_2, 100, 100);
+
+        }
 
         // Se despliega el valor al UART
-       UARTprintf("out_to motor: %d | Ang. IMU: %d\n", (int) encoder1go ,(int) w_k );
-      // UARTprintf("Y%d X%d\n", (int) encoder1go,(int) w_k );
-        //UARTprintf("out_to motor: %d\n", (int) u_k);
-        //UARTprintf( (int) encoder1go );
+        UARTprintf("%3d%3d\n", (int)encoder1go, (int)w_k);
+
+        /*
+         dataIMU[0] = ((uint32_t) w_k >> 24) & 0xff; // high-order (leftmost) byte: bits 24-31
+         dataIMU[1] = ((uint32_t) w_k >> 16) & 0xff; // next byte, counting from left: bits 16-23
+         dataIMU[2] = ((uint32_t) w_k >> 8) & 0xff; // next byte, bits 8-15
+         dataIMU[3] = (uint32_t) w_k & 0xff; //(prueba & 0xff);  // low-order byte: bits 0-7
+
+         encoderdata[0] = ((uint32_t) encoder1go >> 24) & 0xff;
+         encoderdata[1] = ((uint32_t) encoder1go >> 16) & 0xff;
+         encoderdata[2] = ((uint32_t) encoder1go >> 8) & 0xff;
+         encoderdata[3] = (uint32_t) encoder1go & 0xff;
+
+         if (serial == 0)
+         {
+         UARTCharPut(UART0_BASE, '6');
+         }
+
+         if (n == 1)
+         {
+         UARTCharPut(UART0_BASE, '1');
+
+         UARTCharPut(UART0_BASE, dataIMU[0]);
+         UARTCharPut(UART0_BASE, dataIMU[1]);
+         UARTCharPut(UART0_BASE, dataIMU[2]);
+         UARTCharPut(UART0_BASE, dataIMU[3]);
+
+         UARTCharPut(UART0_BASE, encoderdata[0]);
+         UARTCharPut(UART0_BASE, encoderdata[1]);
+         UARTCharPut(UART0_BASE, encoderdata[2]);
+         UARTCharPut(UART0_BASE, encoderdata[3]);
+         n = 0;
+         }
+         */
 
     }
 }
