@@ -18,7 +18,9 @@ void qei_module0_config(uint32_t motor_ratio, uint32_t encoder_pulses,
                         bool swap);
 void qei_module1_config(uint32_t motor_ratio, uint32_t encoder_pulses,
                         bool swap);
-float get_position_in_degrees(uint32_t qei_base, uint32_t motor_ratio,
+float get_position_in_rad(uint32_t qei_base, uint32_t motor_ratio,
+                        uint32_t encoder_pulses);
+float get_position_in_deg(uint32_t qei_base, uint32_t motor_ratio,
                         uint32_t encoder_pulses);
 
 #endif /* ENCODER_H */

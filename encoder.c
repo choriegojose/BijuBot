@@ -76,7 +76,7 @@ qei_module0_config(uint32_t motor_ratio, uint32_t encoder_pulses, bool swap)
 	//Configure quadrature encoder using FT0481 top limit
 	QEIConfigure(QEI0_BASE, (QEI_CONFIG_CAPTURE_A_B | QEI_CONFIG_NO_RESET |
 		QEI_CONFIG_QUADRATURE | temp), 
-        motor_ratio * encoder_pulses);
+        motor_ratio*encoder_pulses);
 
 	//Enable quadrature encoder
 	QEIEnable(QEI0_BASE);
@@ -162,13 +162,24 @@ qei_module1_config(uint32_t motor_ratio, uint32_t encoder_pulses, bool swap)
  * @return The current position of the motor.
  */
 float
-get_position_in_degrees(uint32_t qei_base, uint32_t motor_ratio,
+get_position_in_rad(uint32_t qei_base, uint32_t motor_ratio,
                         uint32_t encoder_pulses)
 {
     uint32_t pos_in_pulses;
     float position;
     pos_in_pulses = QEIPositionGet(qei_base);
-    position = pos_in_pulses * (2*3.1416/(motor_ratio*encoder_pulses));
+    position = pos_in_pulses*((2*3.1416)/(motor_ratio * encoder_pulses)) ;
+return position;
+}
+
+float
+get_position_in_deg(uint32_t qei_base, uint32_t motor_ratio,
+                        uint32_t encoder_pulses)
+{
+    uint32_t pos_in_pulses;
+    float position;
+    pos_in_pulses = QEIPositionGet(qei_base);
+    position = pos_in_pulses*((360)/(motor_ratio * encoder_pulses)) ;
 return position;
 }
 

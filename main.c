@@ -75,14 +75,17 @@ bool ek_1f = false;
 // Delta T del reloj, para controlar al PID
 const float deltat = 0.001;
 
-// Constantes del PID (kp,ki,kd)
-//const float Kp = 0.863;
-//const float KI = 1;
-//const float Kd = 0.0055;
-
-const float Kp = 0.5;
-const float KI = 3;
+// Constantes del PID Jerr
+/*
+const float Kp = 0.863;
+const float KI = 0;
 const float Kd = 0.0055;
+*/
+// Actuales, mejores constantes
+
+const float Kp = 4;
+const float KI = 2;
+const float Kd = 0.07 ;
 
 // Variables para control del TIMER0
 uint32_t ui32Period;
@@ -97,7 +100,7 @@ bool thetagiro_1f = false;
 bool HPF_1f = false;
 bool LPF_1f = false;
 const float lambda = 0.9;
-
+const float pi = 3.1416;
 // Variables, para la colocacion del puerto serial.
 unsigned char dataIMU[4];
 unsigned char encoderdata[4];
@@ -186,7 +189,7 @@ void PWMinit(void)
 
     motor1_configure(100);
     motor2_configure(100);
-    qei_module0_config(100, 12, false);
+    qei_module0_config(75, 28, false);
 
 }
 
@@ -323,7 +326,7 @@ void compfiltering(void)
         HPF_1f = true;
     }
     //1.) Se obtiene la pos angular con el acelerometro
-    thetagiro = thetagiro_1 + (fGyro[1] * (180 / 3.1416) * deltat);
+    thetagiro = thetagiro_1 + (fGyro[1]* deltat*(180/pi));
 
     //2.) Se inicia el filtro, pasa bajas
     LPF = (1 - lambda) * y + lambda * LPF_1;
@@ -437,14 +440,13 @@ int main()
         // Do something with the new accelerometer and gyroscope readings.
         //
 
-        y = (atan2(fAccel[0], fAccel[2]) * 180.0) / 3.1416;
+        y = atan2(fAccel[0], fAccel[2])*(180/pi) ;
 
         // Obtengo el valor de enconder magnetico
-        encoder1_pos = get_position_in_degrees(QEI0_BASE, 100, 12);
+        encoder1_pos = get_position_in_rad(QEI0_BASE, 75, 28);
 
         // Se realiza la converción del decoder
-        encoder1go = atan2(sin(encoder1_pos), cos(encoder1_pos))
-                * (180 / 3.1416);
+        encoder1go = atan2(sin(encoder1_pos), cos(encoder1_pos))*(180/pi);
 
         if (PIDflag == true)
         {
@@ -458,27 +460,29 @@ int main()
         // Asigno el valor al bloque del PID
         // Cargo los valores del PID a la variable para controlar el motor, que es similar a un servo.
         outtoservo = u_k;
+       // motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo, 100);
 
-        if (w_k > 90 && encoder1go > 90)
-        {
-            motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
-        }
 
-        else if (w_k < -90 && encoder1go < -90)
-        {
-            motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
-        }
+         if (w_k > 120)
+         {
+         motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
+         }
 
-        else
-        {
-            motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo, 100);
-            motor_velocity_write(PWM0_BASE, PWM_GEN_2, 100, 100);
+         else if (w_k < -120)
+         {
+         motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
+         }
 
-        }
+         else
+         {
+         motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo, 100);
+         //motor_velocity_write(PWM0_BASE, PWM_GEN_2, 100, 100);
+         }
+
+
 
         // Se despliega el valor al UART
-        UARTprintf("%3d%3d\n", (int)encoder1go, (int)w_k);
-
+        //UARTprintf("%3d%3d\n", (int) encoder1_pos, (int) w_k);
         /*
          dataIMU[0] = ((uint32_t) w_k >> 24) & 0xff; // high-order (leftmost) byte: bits 24-31
          dataIMU[1] = ((uint32_t) w_k >> 16) & 0xff; // next byte, counting from left: bits 16-23
