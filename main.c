@@ -440,7 +440,7 @@ int main()
         // Do something with the new accelerometer and gyroscope readings.
         //
 
-        y = atan2(fAccel[0], fAccel[2])*(180/pi) ;
+        y = -atan2(fAccel[0], fAccel[2])*(180/pi) ;
 
         // Obtengo el valor de enconder magnetico
         encoder1_pos = get_position_in_rad(QEI0_BASE, 75, 28);
