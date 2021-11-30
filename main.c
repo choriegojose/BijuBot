@@ -1,3 +1,4 @@
+
 // Archivo Main BijuBot.
 /** @file main.c
  *
@@ -482,7 +483,7 @@ int main()
 
 
         // Se despliega el valor al UART
-        //UARTprintf("%3d%3d\n", (int) encoder1_pos, (int) w_k);
+        UARTprintf("%3d%3d\n", (int) encoder1go, (int) w_k);
         /*
          dataIMU[0] = ((uint32_t) w_k >> 24) & 0xff; // high-order (leftmost) byte: bits 24-31
          dataIMU[1] = ((uint32_t) w_k >> 16) & 0xff; // next byte, counting from left: bits 16-23
