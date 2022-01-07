@@ -57,7 +57,7 @@ extern uint32_t __STACK_TOP;
 // To be added by user
 void I2CMSimpleIntHandler(void);
 extern void Timer0IntHandlerA(void);
-void UART0IntHandler(void);
+//void UART1IntHandler(void);
 
 //*****************************************************************************
 //
@@ -91,8 +91,8 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // GPIO Port C
     IntDefaultHandler,                      // GPIO Port D
     IntDefaultHandler,                      // GPIO Port E
-    UART0IntHandler,                        // UART0 Rx and Tx
-    IntDefaultHandler,                      // UART1 Rx and Tx
+    IntDefaultHandler,                        // UART0 Rx and Tx
+    IntDefaultHandler,                        // UART1 Rx and Tx
     IntDefaultHandler,                      // SSI0 Rx and Tx
     I2CMSimpleIntHandler,                   // I2C0 Master and Slave
     IntDefaultHandler,                      // PWM Fault

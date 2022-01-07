@@ -1,4 +1,3 @@
-
 // Archivo Main BijuBot.
 /** @file main.c
  *
@@ -78,15 +77,14 @@ const float deltat = 0.001;
 
 // Constantes del PID Jerr
 /*
-const float Kp = 0.863;
-const float KI = 0;
-const float Kd = 0.0055;
-*/
+ const float Kp = 0.863;
+ const float KI = 0;
+ const float Kd = 0.0055;
+ */
 // Actuales, mejores constantes
-
-const float Kp = 4;
-const float KI = 2;
-const float Kd = 0.07 ;
+const float Kp = 0.8;
+const float KI = 0;
+const float Kd = 0.005;
 
 // Variables para control del TIMER0
 uint32_t ui32Period;
@@ -105,6 +103,7 @@ const float pi = 3.1416;
 // Variables, para la colocacion del puerto serial.
 unsigned char dataIMU[4];
 unsigned char encoderdata[4];
+uint32_t ui32Ustatus; // variable para el status de las interrupciones del UART
 char n;
 int serial;
 
@@ -118,13 +117,27 @@ void compfiltering(void);
 // Empiezan Funciones
 
 // Interrupcion de UART
-void UART0IntHandler(void)
+/*
+void UART1IntHandler(void)
 {
-    UARTIntClear(UART0_BASE, UARTIntStatus(UART0_BASE, true));
-    n = UARTCharGet(UART0_BASE);
-    serial = 1;
-}
+    ui32Ustatus = UARTIntStatus(UART1_BASE, true);
+    UARTIntClear(UART1_BASE, ui32Ustatus);
+    while (UARTCharsAvail(UART1_BASE))
+    {
+        if (UARTCharGet(UART1_BASE) == '1')
+        {
+            serial = 0x01;
 
+        }
+
+        if (UARTCharGet(UART1_BASE) == '2')
+        {
+            serial = 0x02;
+
+        }
+    }
+}
+*/
 void Timer0IntHandlerA(void)
 {
     // Borramos la interrupcion del timer
@@ -199,7 +212,7 @@ void TIMER0en(void)
 {
     TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Habilitamos la interrupcion del timer.
 
-    IntMasterEnable();  // Habilitamos las interrupciones generales
+    IntMasterEnable(); // Habilitamos las interrupciones generales
 
     TimerEnable(TIMER0_BASE, TIMER_A); // Habilito el timer 0
 }
@@ -243,22 +256,43 @@ void InitI2C0(void)
 }
 
 void ConfigureUART(void)
-{ // Se configura el UART y el Baudrate
+{
 
+    // Se configura el UART y el Baudrate del puerto A para consola serial.
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-    /*
-     UARTConfigSetExpClk(
-     UART0_BASE, SysCtlClockGet(), 115200,
-     UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE);
-     UARTStdioConfig(0, 115200, SysCtlClockGet());
-     n = 0;
-     */
     UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
     UARTStdioConfig(0, 115200, 16000000);
+
+    /*
+     // UART 1 para el puerto B
+     //Habilitamos el puerto B en el UART
+
+     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+
+     // Habilitamos el periferico en el puerto B*
+     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
+
+     GPIOPinConfigure(GPIO_PB0_U1RX);
+     GPIOPinConfigure(GPIO_PB1_U1TX);
+
+     // UART es controlado por los perifericos
+     GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+     // Ponemos la config del UART.
+     UARTConfigSetExpClk(
+     UART1_BASE, SysCtlClockGet(), 115200,
+     (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+
+
+     // Habilitamos las interrupciones para el UART1
+     IntMasterEnable();
+     IntEnable(INT_UART1);
+     UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
+     */
 }
 
 //
@@ -327,7 +361,7 @@ void compfiltering(void)
         HPF_1f = true;
     }
     //1.) Se obtiene la pos angular con el acelerometro
-    thetagiro = thetagiro_1 + (fGyro[1]* deltat*(180/pi));
+    thetagiro = thetagiro_1 + (fGyro[1] * deltat * (180 / pi));
 
     //2.) Se inicia el filtro, pasa bajas
     LPF = (1 - lambda) * y + lambda * LPF_1;
@@ -441,13 +475,13 @@ int main()
         // Do something with the new accelerometer and gyroscope readings.
         //
 
-        y = -atan2(fAccel[0], fAccel[2])*(180/pi) ;
+        y = -atan2(fAccel[0], fAccel[2]) * (180 / pi);
 
         // Obtengo el valor de enconder magnetico
         encoder1_pos = get_position_in_rad(QEI0_BASE, 75, 28);
 
         // Se realiza la converción del decoder
-        encoder1go = atan2(sin(encoder1_pos), cos(encoder1_pos))*(180/pi);
+        encoder1go = atan2(sin(encoder1_pos), cos(encoder1_pos)) * (180 / pi);
 
         if (PIDflag == true)
         {
@@ -461,61 +495,63 @@ int main()
         // Asigno el valor al bloque del PID
         // Cargo los valores del PID a la variable para controlar el motor, que es similar a un servo.
         outtoservo = u_k;
-       // motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo, 100);
+        // motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo, 100);
+
+        //Margenes de angulos para la posición en el ecoder magnetico
+
+        if (w_k > 120)
+        {
+            motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
+        }
+
+        else if (w_k < -120)
+        {
+            motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
+        }
+
+        else
+        {
+            motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo,  100);
+            //motor_velocity_write(PWM0_BASE, PWM_GEN_2, 100 , 100);
+
+        }
 
 
-         if (w_k > 120)
+
+        //Secuencia para activación del segundo motor
+        /*
+         if (serial == 0x01)
          {
-         motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
+         motor_velocity_write(PWM0_BASE, PWM_GEN_2, 100, 100);
          }
 
-         else if (w_k < -120)
+         else if (serial == 0x02)
          {
-         motor_velocity_write(PWM0_BASE, PWM_GEN_0, 0, 100);
+         motor_velocity_write(PWM0_BASE, PWM_GEN_2, 0, 100);
+         }
+         else
+         {
+         motor_velocity_write(PWM0_BASE, PWM_GEN_2, 0, 0);
+         }
+         */
+
+        /*
+         while (UARTCharsAvail(UART1_BASE))
+         {
+         if (UARTCharGet(UART1_BASE) == '1')
+         {
+         motor_velocity_write(PWM0_BASE, PWM_GEN_2, 100, 100);
          }
 
          else
          {
-         motor_velocity_write(PWM0_BASE, PWM_GEN_0, outtoservo, 100);
-         //motor_velocity_write(PWM0_BASE, PWM_GEN_2, 100, 100);
+         motor_velocity_write(PWM0_BASE, PWM_GEN_2, 0, 0);
          }
-
-
-
-        // Se despliega el valor al UART
-        UARTprintf("%3d%3d\n", (int) encoder1go, (int) w_k);
-        /*
-         dataIMU[0] = ((uint32_t) w_k >> 24) & 0xff; // high-order (leftmost) byte: bits 24-31
-         dataIMU[1] = ((uint32_t) w_k >> 16) & 0xff; // next byte, counting from left: bits 16-23
-         dataIMU[2] = ((uint32_t) w_k >> 8) & 0xff; // next byte, bits 8-15
-         dataIMU[3] = (uint32_t) w_k & 0xff; //(prueba & 0xff);  // low-order byte: bits 0-7
-
-         encoderdata[0] = ((uint32_t) encoder1go >> 24) & 0xff;
-         encoderdata[1] = ((uint32_t) encoder1go >> 16) & 0xff;
-         encoderdata[2] = ((uint32_t) encoder1go >> 8) & 0xff;
-         encoderdata[3] = (uint32_t) encoder1go & 0xff;
-
-         if (serial == 0)
-         {
-         UARTCharPut(UART0_BASE, '6');
-         }
-
-         if (n == 1)
-         {
-         UARTCharPut(UART0_BASE, '1');
-
-         UARTCharPut(UART0_BASE, dataIMU[0]);
-         UARTCharPut(UART0_BASE, dataIMU[1]);
-         UARTCharPut(UART0_BASE, dataIMU[2]);
-         UARTCharPut(UART0_BASE, dataIMU[3]);
-
-         UARTCharPut(UART0_BASE, encoderdata[0]);
-         UARTCharPut(UART0_BASE, encoderdata[1]);
-         UARTCharPut(UART0_BASE, encoderdata[2]);
-         UARTCharPut(UART0_BASE, encoderdata[3]);
-         n = 0;
          }
          */
+
+        // Se despliega el valor al UART
+        UARTprintf("%d,%d\n", (int) outtoservo, (int) e_k);
 
     }
 }
